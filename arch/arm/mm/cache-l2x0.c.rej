@@ -1,0 +1,11 @@
+--- arch/arm/mm/cache-l2x0.c	2012-05-08 00:02:36.000000000 +0800
++++ arch/arm/mm/cache-l2x0.c	2013-10-22 15:58:59.000000000 +0800
+@@ -347,6 +366,8 @@
+ 	 * accessing the below registers will fault.
+ 	 */
+ 	if (!(readl_relaxed(l2x0_base + L2X0_CTRL) & 1)) {
++		/* Make sure that I&D is not locked down when starting */
++		l2x0_unlock(cache_id);
+ 
+ 		/* l2x0 controller is disabled */
+ 		writel_relaxed(aux, l2x0_base + L2X0_AUX_CTRL);

@@ -1,0 +1,19 @@
+--- kernel/time/timekeeping.c	2012-05-08 00:02:36.000000000 +0800
++++ kernel/time/timekeeping.c	2013-10-22 15:58:59.000000000 +0800
+@@ -649,9 +690,15 @@
+  */
+ static void __timekeeping_inject_sleeptime(struct timespec *delta)
+ {
++	if (!timespec_valid_strict(delta)) {
++		printk(KERN_WARNING "__timekeeping_inject_sleeptime: Invalid "
++					"sleep delta value!\n");
++		return;
++	}
++
+ 	xtime = timespec_add(xtime, *delta);
+ 	wall_to_monotonic = timespec_sub(wall_to_monotonic, *delta);
+-	total_sleep_time = timespec_add(total_sleep_time, *delta);
++	update_sleep_time(timespec_add(total_sleep_time, *delta));
+ }
+ 
+ 

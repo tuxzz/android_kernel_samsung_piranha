@@ -1,0 +1,22 @@
+--- drivers/mmc/core/sd.c	2012-05-08 00:02:36.000000000 +0800
++++ drivers/mmc/core/sd.c	2013-10-22 15:58:59.000000000 +0800
+@@ -306,6 +306,9 @@
+ 		goto out;
+ 	}
+ 
++	if (status[13] & UHS_SDR50_BUS_SPEED)
++		card->sw_caps.hs_max_dtr = 50000000;
++
+ 	if (card->scr.sda_spec3) {
+ 		card->sw_caps.sd3_bus_mode = status[13];
+ 
+@@ -348,9 +351,6 @@
+ 		}
+ 
+ 		card->sw_caps.sd3_curr_limit = status[7];
+-	} else {
+-		if (status[13] & 0x02)
+-			card->sw_caps.hs_max_dtr = 50000000;
+ 	}
+ 
+ out:

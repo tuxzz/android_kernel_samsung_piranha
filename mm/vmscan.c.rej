@@ -1,0 +1,17 @@
+--- mm/vmscan.c	2012-05-08 00:02:36.000000000 +0800
++++ mm/vmscan.c	2013-10-22 15:58:59.000000000 +0800
+@@ -726,7 +769,13 @@
+ 		 */
+ 		SetPageReferenced(page);
+ 
+-		if (referenced_page)
++		if (referenced_page || referenced_ptes > 1)
++			return PAGEREF_ACTIVATE;
++
++		/*
++		 * Activate file-backed executable pages after first usage.
++		 */
++		if (vm_flags & VM_EXEC)
+ 			return PAGEREF_ACTIVATE;
+ 
+ 		return PAGEREF_KEEP;

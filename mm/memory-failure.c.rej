@@ -1,0 +1,11 @@
+--- mm/memory-failure.c	2012-05-08 00:02:36.000000000 +0800
++++ mm/memory-failure.c	2013-10-22 15:58:59.000000000 +0800
+@@ -1472,7 +1480,7 @@
+ 					    page_is_file_cache(page));
+ 		list_add(&page->lru, &pagelist);
+ 		ret = migrate_pages(&pagelist, new_page, MPOL_MF_MOVE_ALL,
+-								0, true);
++							false, MIGRATE_SYNC);
+ 		if (ret) {
+ 			putback_lru_pages(&pagelist);
+ 			pr_info("soft offline: %#lx: migration failed %d, type %lx\n",

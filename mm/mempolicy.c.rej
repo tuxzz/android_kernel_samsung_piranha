@@ -1,0 +1,11 @@
+--- mm/mempolicy.c	2012-05-08 00:02:36.000000000 +0800
++++ mm/mempolicy.c	2013-10-22 15:58:59.000000000 +0800
+@@ -948,7 +963,7 @@
+ 
+ 	if (!list_empty(&pagelist)) {
+ 		err = migrate_pages(&pagelist, new_node_page, dest,
+-								false, true);
++							false, MIGRATE_SYNC);
+ 		if (err)
+ 			putback_lru_pages(&pagelist);
+ 	}

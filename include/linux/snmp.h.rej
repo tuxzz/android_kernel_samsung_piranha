@@ -1,0 +1,11 @@
+--- include/linux/snmp.h	2012-05-08 00:02:36.000000000 +0800
++++ include/linux/snmp.h	2013-10-22 15:58:59.000000000 +0800
+@@ -230,6 +229,8 @@
+ 	LINUX_MIB_TCPDEFERACCEPTDROP,
+ 	LINUX_MIB_IPRPFILTER, /* IP Reverse Path Filter (rp_filter) */
+ 	LINUX_MIB_TCPTIMEWAITOVERFLOW,		/* TCPTimeWaitOverflow */
++	LINUX_MIB_TCPCHALLENGEACK,		/* TCPChallengeACK */
++	LINUX_MIB_TCPSYNCHALLENGE,		/* TCPSYNChallenge */
+ 	__LINUX_MIB_MAX
+ };
+ 

@@ -1,0 +1,58 @@
+--- mm/compaction.c	2012-05-08 00:02:36.000000000 +0800
++++ mm/compaction.c	2013-10-22 15:58:59.000000000 +0800
+@@ -35,10 +35,6 @@
+ 	unsigned long migrate_pfn;	/* isolate_migratepages search base */
+ 	bool sync;			/* Synchronous migration */
+ 
+-	/* Account for isolated anon and file pages */
+-	unsigned long nr_anon;
+-	unsigned long nr_file;
+-
+ 	unsigned int order;		/* order a direct compactor needs */
+ 	int migratetype;		/* MOVABLE, RECLAIMABLE etc */
+ 	struct zone *zone;
+@@ -223,17 +219,13 @@
+ static void acct_isolated(struct zone *zone, struct compact_control *cc)
+ {
+ 	struct page *page;
+-	unsigned int count[NR_LRU_LISTS] = { 0, };
++	unsigned int count[2] = { 0, };
+ 
+-	list_for_each_entry(page, &cc->migratepages, lru) {
+-		int lru = page_lru_base_type(page);
+-		count[lru]++;
+-	}
++	list_for_each_entry(page, &cc->migratepages, lru)
++		count[!!page_is_file_cache(page)]++;
+ 
+-	cc->nr_anon = count[LRU_ACTIVE_ANON] + count[LRU_INACTIVE_ANON];
+-	cc->nr_file = count[LRU_ACTIVE_FILE] + count[LRU_INACTIVE_FILE];
+-	__mod_zone_page_state(zone, NR_ISOLATED_ANON, cc->nr_anon);
+-	__mod_zone_page_state(zone, NR_ISOLATED_FILE, cc->nr_file);
++	__mod_zone_page_state(zone, NR_ISOLATED_ANON, count[0]);
++	__mod_zone_page_state(zone, NR_ISOLATED_FILE, count[1]);
+ }
+ 
+ /* Similar to reclaim, but different enough that they don't share logic */
+@@ -585,7 +581,7 @@
+ 		nr_migrate = cc->nr_migratepages;
+ 		err = migrate_pages(&cc->migratepages, compaction_alloc,
+ 				(unsigned long)cc, false,
+-				cc->sync);
++				cc->sync ? MIGRATE_SYNC_LIGHT : MIGRATE_ASYNC);
+ 		update_nr_listpages(cc);
+ 		nr_remaining = cc->nr_migratepages;
+ 
+@@ -600,8 +596,11 @@
+ 		if (err) {
+ 			putback_lru_pages(&cc->migratepages);
+ 			cc->nr_migratepages = 0;
++			if (err == -ENOMEM) {
++				ret = COMPACT_PARTIAL;
++				goto out;
++			}
+ 		}
+-
+ 	}
+ 
+ out:

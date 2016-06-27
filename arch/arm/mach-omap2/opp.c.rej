@@ -1,0 +1,10 @@
+--- arch/arm/mach-omap2/opp.c	2012-05-08 00:02:36.000000000 +0800
++++ arch/arm/mach-omap2/opp.c	2013-10-22 15:58:59.000000000 +0800
+@@ -86,7 +86,6 @@
+ 					__func__, opp_def->freq,
+ 					opp_def->hwmod_name, i, r);
+ 		}
+-		opp_def++;
+ 	}
+ 
+ 	return 0;
