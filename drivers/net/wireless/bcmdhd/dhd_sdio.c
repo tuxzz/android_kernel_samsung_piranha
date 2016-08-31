@@ -388,6 +388,10 @@ static int tx_packets[NUMPRIO];
 const uint dhd_deferred_tx = 1;
 
 extern uint dhd_watchdog_ms;
+#ifdef BCMSPI_ANDROID
+extern uint *dhd_spi_lockcount;
+#endif /* BCMSPI_ANDROID */
+
 extern void dhd_os_wd_timer(void *bus, uint wdtick);
 
 /* Tx/Rx bounds */
@@ -550,7 +554,7 @@ do {												\
 												\
 	R_SDREG(intstatuserr, &bus->regs->intstatus, retries);					\
 	printf("dstatussw = 0x%x, dstatushw = 0x%x, intstatus = 0x%x\n",			\
-	        dstatussw, dstatushw, intstatuserr);						\
+	        dstatussw, dstatushw, intstatuserr); 						\
 												\
 	bus->nextlen = 0;									\
 	*finished = TRUE;									\
@@ -1073,6 +1077,8 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 		bus->kso = on ? FALSE : TRUE;
 	else {
 		DHD_ERROR(("%s: Sleep request failed: on:%d err:%d\n", __FUNCTION__, on, err));
+		if (!on && retry > 2)
+			bus->kso = TRUE;
 	}
 
 	return err;
@@ -1561,7 +1567,7 @@ dhd_enable_oob_intr(struct dhd_bus *bus, bool enable)
 	dhdsdio_clkctl(bus, CLK_SDONLY, FALSE);
 #endif /* !defined(HW_OOB) */
 }
-#endif /* defined(OOB_INTR_ONLY) */
+#endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
 
 /* Writes a HW/SW header into the packet and sends it. */
 /* Assumes: (a) header space already there, (b) caller holds lock */
@@ -3589,6 +3595,34 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 		dhd_serialconsole(bus, TRUE, bool_val, &bcmerror);
 		break;
 
+#if defined(SDIO_CRC_ERROR_FIX)
+	case IOV_GVAL(IOV_WATERMARK):
+		int_val = (int32)watermark;
+		bcopy(&int_val, arg, val_size);
+		break;
+
+	case IOV_SVAL(IOV_WATERMARK):
+		watermark = (uint)int_val;
+		watermark = (watermark > SBSDIO_WATERMARK_MASK) ? SBSDIO_WATERMARK_MASK : watermark;
+		DHD_ERROR(("Setting watermark as 0x%x.\n", watermark));
+		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_WATERMARK, (uint8)watermark, NULL);
+		break;
+
+	case IOV_GVAL(IOV_MESBUSYCTRL):
+		int_val = (int32)mesbusyctrl;
+		bcopy(&int_val, arg, val_size);
+		break;
+
+	case IOV_SVAL(IOV_MESBUSYCTRL):
+		mesbusyctrl = (uint)int_val;
+		mesbusyctrl = (mesbusyctrl > SBSDIO_MESBUSYCTRL_MASK)
+						? SBSDIO_MESBUSYCTRL_MASK : mesbusyctrl;
+		DHD_ERROR(("Setting mesbusyctrl as 0x%x.\n", mesbusyctrl));
+		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_MESBUSYCTRL,
+			((uint8)mesbusyctrl | 0x80), NULL);
+		break;
+#endif /* SDIO_CRC_ERROR_FIX */
+
 
 
 #endif /* DHD_DEBUG */
@@ -3876,6 +3910,7 @@ dhdsdio_download_state(dhd_bus_t *bus, bool enter)
 	 */
 	if (enter) {
 		bus->alp_only = TRUE;
+
 
 		if (!(si_setcore(bus->sih, ARM7S_CORE_ID, 0)) &&
 		    !(si_setcore(bus->sih, ARMCM3_CORE_ID, 0))) {
@@ -4380,7 +4415,9 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 		bus->intdis = FALSE;
 		if (bus->intr) {
 			DHD_INTR(("%s: enable SDIO device interrupts\n", __FUNCTION__));
+#ifndef BCMSPI_ANDROID
 			bcmsdh_intr_enable(bus->sdh);
+#endif /* !BCMSPI_ANDROID */
 		} else {
 			DHD_INTR(("%s: disable SDIO interrupts\n", __FUNCTION__));
 			bcmsdh_intr_disable(bus->sdh);
@@ -6018,10 +6055,14 @@ clkwait:
 		DHD_INTR(("%s: enable SDIO interrupts, rxdone %d framecnt %d\n",
 		          __FUNCTION__, rxdone, framecnt));
 		bus->intdis = FALSE;
-#if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID)
+#if defined(OOB_INTR_ONLY)
 	bcmsdh_oob_intr_set(1);
-#endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
+#endif /* defined(OOB_INTR_ONLY) */
 		bcmsdh_intr_enable(sdh);
+#ifdef BCMSPI_ANDROID
+		if (*dhd_spi_lockcount == 0)
+			bcmsdh_oob_intr_set(1);
+#endif /* BCMSPI_ANDROID */
 	}
 
 #if defined(OOB_INTR_ONLY) && !defined(HW_OOB)
@@ -6190,6 +6231,9 @@ dhdsdio_isr(void *arg)
 		DHD_ERROR(("dhdsdio_isr() w/o interrupt configured!\n"));
 	}
 
+#ifdef BCMSPI_ANDROID
+	bcmsdh_oob_intr_set(0);
+#endif /* BCMSPI_ANDROID */
 	bcmsdh_intr_disable(sdh);
 	bus->intdis = TRUE;
 
@@ -6767,6 +6811,8 @@ dhdsdio_chipmatch(uint16 chipid)
 	if (chipid == BCM4314_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM4334_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM43341_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM43341_CHIP_ID)
 		return TRUE;
@@ -7950,9 +7996,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					if (bcmerror == BCME_OK) {
 #if defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID)
 						bcmsdh_set_irq(TRUE);
-#ifndef BCMSPI_ANDROID
 						dhd_enable_oob_intr(bus, TRUE);
-#endif /* !BCMSPI_ANDROID */
 #endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
 
 						bus->dhd->dongle_reset = FALSE;

@@ -2,13 +2,13 @@
  * Linux cfg80211 driver
  *
  * Copyright (C) 1999-2012, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -62,6 +62,12 @@ struct wl_ibss;
 /* 0 invalidates all debug messages.  default is 1 */
 #define WL_DBG_LEVEL 0xFF
 
+#ifdef CUSTOMER_HW4
+#define CFG80211_ERROR_TEXT		"CFG80211-INFO2) "
+#else
+#define CFG80211_ERROR_TEXT		"CFG80211-ERROR) "
+#endif
+
 #if defined(DHD_DEBUG)
 #define	WL_ERR(args)									\
 do {										\
@@ -76,7 +82,7 @@ do {										\
 	if ((wl_dbg_level & WL_DBG_ERR) && net_ratelimit()) {				\
 			printk(KERN_INFO "CFG80211-INFO2) %s : ", __func__);	\
 			printk args;						\
-		}								\
+		} 								\
 } while (0)
 #endif /* defined(DHD_DEBUG) */
 
@@ -119,7 +125,7 @@ do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
 			printk(KERN_INFO "CFG80211-TRACE) %s : ", __func__);	\
 			printk args;						\
-		}								\
+		} 								\
 } while (0)
 #else
 #define	WL_TRACE_HW4			WL_TRACE
@@ -481,9 +487,10 @@ struct parsed_ies {
 };
 
 
+
 #ifdef WL11U
 /* Max length of Interworking element */
-#define IW_IES_MAX_BUF_LEN		9
+#define IW_IES_MAX_BUF_LEN 		9
 #endif
 
 /* private data of cfg80211 interface */

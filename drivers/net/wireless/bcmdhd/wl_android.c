@@ -240,6 +240,45 @@ static struct genl_multicast_group wl_genl_mcast = {
 
 #endif /* WL_GENL */
 
+#ifdef WL_GENL
+static s32 wl_genl_handle_msg(struct sk_buff *skb, struct genl_info *info);
+static int wl_genl_init(void);
+static int wl_genl_deinit(void);
+
+extern struct net init_net;
+/* attribute policy: defines which attribute has which type (e.g int, char * etc)
+ * possible values defined in net/netlink.h
+ */
+static struct nla_policy wl_genl_policy[BCM_GENL_ATTR_MAX + 1] = {
+	[BCM_GENL_ATTR_MSG] = { .type = NLA_NUL_STRING },
+};
+
+#define WL_GENL_VER 1
+/* family definition */
+static struct genl_family wl_genl_family = {
+	.id = GENL_ID_GENERATE,    /* Genetlink would generate the ID */
+	.hdrsize = 0,
+	.name = "bcm-genl",        /* Netlink I/F for Android */
+	.version = WL_GENL_VER,     /* Version Number */
+	.maxattr = BCM_GENL_ATTR_MAX,
+};
+
+/* commands: mapping between the command enumeration and the actual function */
+struct genl_ops wl_genl_ops = {
+	.cmd = BCM_GENL_CMD_MSG,
+	.flags = 0,
+	.policy = wl_genl_policy,
+	.doit = wl_genl_handle_msg,
+	.dumpit = NULL,
+};
+
+static struct genl_multicast_group wl_genl_mcast = {
+	.id = GENL_ID_GENERATE,    /* Genetlink would generate the ID */
+	.name = "bcm-genl-mcast",
+};
+
+#endif /* WL_GENL */
+
 /**
  * Extern function declarations (TODO: move them to dhd_linux.h)
  */
@@ -1591,6 +1630,28 @@ int wl_android_set_roam_mode(struct net_device *dev, char *command, int total_le
 	return 0;
 }
 
+int wl_android_set_roam_mode(struct net_device *dev, char *command, int total_len)
+{
+	int error = 0;
+	int mode = 0;
+
+	if (sscanf(command, "%*s %d", &mode) != 1) {
+		DHD_ERROR(("%s: Failed to get Parameter\n", __FUNCTION__));
+		return -1;
+	}
+
+	error = wldev_iovar_setint(dev, "roam_off", mode);
+	if (error) {
+		DHD_ERROR(("%s: Failed to set roaming Mode %d, error = %d\n",
+		__FUNCTION__, mode, error));
+		return -1;
+	}
+	else
+		DHD_ERROR(("%s: succeeded to set roaming Mode %d, error = %d\n",
+		__FUNCTION__, mode, error));
+	return 0;
+}
+
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 {
 #define PRIVATE_COMMAND_MAX_LEN	8192
@@ -1769,7 +1830,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		strlen(CMD_COUNTRYREV_SET)) == 0) {
 		bytes_written = wl_android_set_country_rev(net, command,
 		priv_cmd.total_len);
-		wl_update_wiphybands(NULL);
 	} else if (strnicmp(command, CMD_COUNTRYREV_GET,
 		strlen(CMD_COUNTRYREV_GET)) == 0) {
 		bytes_written = wl_android_get_country_rev(net, command,
@@ -1845,7 +1905,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		uint pfn_enabled = *(command + strlen(CMD_PNOENABLE_SET) + 1) - '0';
 		bytes_written = dhd_dev_pno_enable(net, pfn_enabled);
 	}
-#endif
+#endif /* PNO_SUPPORT && !WL_SCHED_SCAN */
 	else if (strnicmp(command, CMD_P2P_DEV_ADDR, strlen(CMD_P2P_DEV_ADDR)) == 0) {
 		bytes_written = wl_android_get_p2p_dev_addr(net, command, priv_cmd.total_len);
 	}
@@ -1988,6 +2048,10 @@ int wl_android_init(void)
 #ifdef WL_GENL
 	wl_genl_init();
 #endif
+
+#ifdef WL_GENL
+	wl_genl_deinit();
+#endif /* WL_GENL */
 
 	return ret;
 }

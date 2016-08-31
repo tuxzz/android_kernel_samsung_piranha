@@ -419,7 +419,7 @@ static void tsp_set_power_regulator(bool on)
 static struct melfas_fw_info superior_tsp_fw_info = {
 	.product_code = "465GS37",
 	.core_version = 0x45,
-	.release_date = "1203",
+	.release_date = "1222",
 };
 
 static struct sec_ts_platform_data superior_ts_pdata = {

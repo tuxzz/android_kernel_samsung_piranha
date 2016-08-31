@@ -550,7 +550,7 @@ struct omap_cma_info *omap_cma_info_create(struct ion_platform_heap *data,
 				&cma_info->dma_handle, 0);
 
 	INIT_DELAYED_WORK(&cma_info->release_work, omap_cma_info_release);
-	schedule_delayed_work(&cma_info->release_work, msecs_to_jiffies(25000));
+	schedule_delayed_work(&cma_info->release_work, msecs_to_jiffies(20000));
 
 	mutex_init(&cma_info->lock);
 

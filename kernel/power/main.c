@@ -438,9 +438,6 @@ static void cpufreq_min_limit(const char *buf, size_t count)
 	cpufreq_min_locked = 1;
 
 out:
-	pr_info("%s: curr_min_freq=%d req_min freq=%d\n",
-		__func__, temp, cpufreq_min_limit_val);
-
 	if (ret < 0)
 		cpufreq_min_limit_val = temp;
 
@@ -496,8 +493,6 @@ static void cpufreq_max_limit(const char *buf)
 	cpufreq_max_locked = 1;
 
 out:
-	pr_info("%s: curr_max_freq=%d req_max_freq=%d\n",
-		__func__, temp, cpufreq_max_limit_val);
 	if (ret < 0)
 		cpufreq_max_limit_val = temp;
 

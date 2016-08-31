@@ -677,7 +677,7 @@ dhd_ioctl(dhd_pub_t * dhd_pub, dhd_ioctl_t *ioc, void * buf, uint buflen)
 
 	case DHD_GET_VERSION:
 		if (buflen < sizeof(int))
-			bcmerror = -BCME_BUFTOOSHORT;
+			bcmerror = BCME_BUFTOOSHORT;
 		else
 			*(int*)buf = DHD_IOCTL_VERSION;
 		break;
@@ -1942,6 +1942,7 @@ dhd_pno_enable(dhd_pub_t *dhd, int pfn_enabled)
 		DHD_ERROR(("%s pno is NOT enable : called in assoc mode , ignore\n", __FUNCTION__));
 		return ret;
 	}
+#endif /* !WL_SCHED_SCAN */
 
 	/* Enable/disable PNO */
 	if ((ret = bcm_mkiovar("pfn", (char *)&pfn_enabled, 4, iovbuf, sizeof(iovbuf))) > 0) {

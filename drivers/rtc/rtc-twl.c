@@ -382,7 +382,8 @@ static int twl_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alm)
 	alarm_data[5] = bin2bcd(alm->time.tm_mon + 1);
 	alarm_data[6] = bin2bcd(alm->time.tm_year - 100);
 
-	printk(KERN_INFO"%s, %d/%d/%d %d:%d:%d\n", __func__,
+	printk(KERN_INFO"%s, [%d] %d/%d/%d %d:%d:%d\n", __func__,
+			alm->enabled,
 			alm->time.tm_year-100,
 			alm->time.tm_mon+1,
 			alm->time.tm_mday,
@@ -427,7 +428,10 @@ static void check_alarm_boot()
 	rtc_tm_to_time(&current_rtc_time, &time_sec);
 	rtc_tm_to_time(&alm_reg_time, &alarm_sec);
 
-	if ((time_sec > alarm_sec - 20) && (time_sec < alarm_sec + 20))
+	printk(KERN_INFO"%s: time_sec = %ld, alarm_sec = %ld, diff  = %ld\n",
+				 __func__, time_sec, alarm_sec, time_sec - alarm_sec);
+
+	if ((time_sec > alarm_sec - 50) && (time_sec < alarm_sec + 20))
 		kernel_restart(NULL);
 }
 #endif
@@ -447,9 +451,12 @@ static irqreturn_t twl_rtc_interrupt(int irq, void *rtc)
 		goto out;
 
 #if defined(CONFIG_RTC_CHN_ALARM_BOOT)
-	res = twl_rtc_read_u8(&check_alm_boot, 0x17);
+	res = twl_i2c_read_u8(TWL4030_MODULE_SECURED_REG, &check_alm_boot, 0x00);
 	if (res)
 		goto out;
+
+	printk(KERN_INFO"%s: bootmode = %d, almboot = %d, rd_reg = 0x%x\n",
+			 __func__, sec_bootmode, check_alm_boot, rd_reg);
 
 	if ((sec_bootmode == 5) && check_alm_boot) {
 		if (rd_reg & 0x40)
@@ -648,10 +655,15 @@ static int __devinit twl_rtc_probe(struct platform_device *pdev)
 	alm_reg_time.tm_mon = bcd2bin(t_alarm_time[4]) - 1;
 	alm_reg_time.tm_year = bcd2bin(t_alarm_time[5]) + 100;
 
-	ret = twl_i2c_write_u8(TWL_MODULE_RTC, 0x00, 0x17);
-	if (ret < 0)
-		pr_err("twl_rtc: Could not write TWL"
-		       "register 0x17 - error %d\n", ret);
+	if (sec_bootmode == 5) {
+		autoboot_alm_exit.enabled = (rtc_irq_bits & 0x08);
+		autoboot_alm_exit.time = alm_reg_time;
+	} else {
+		ret = twl_i2c_write_u8(TWL4030_MODULE_SECURED_REG, 0x00, 0x00);
+		if (ret < 0)
+			pr_err("twl_rtc: Could not write TWL"
+			       "register 0x17 - error %d\n", ret);
+	}
 #endif
 
 	return 0;
@@ -707,9 +719,9 @@ static void twl_rtc_shutdown(struct platform_device *pdev)
 #if defined(CONFIG_RTC_CHN_ALARM_BOOT)
 	twl_rtc_set_alarm(&pdev->dev, &autoboot_alm_exit);
 	if (autoboot_alm_exit.enabled)
-		twl_i2c_write_u8(TWL_MODULE_RTC, 0x01, 0x17);
+		twl_i2c_write_u8(TWL4030_MODULE_SECURED_REG, 0x01, 0x00);
 	else
-		twl_i2c_write_u8(TWL_MODULE_RTC, 0x00, 0x17);
+		twl_i2c_write_u8(TWL4030_MODULE_SECURED_REG, 0x00, 0x00);
 #endif
 }
 

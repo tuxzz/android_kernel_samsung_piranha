@@ -432,7 +432,7 @@ static int proximity_adc_read(struct gp2a_data *data)
 	int avg;
 	int min;
 	int max;
-	int total;
+	int total = 0;
 	int D2_data;
 	unsigned char get_D2_data[2];
 
@@ -564,7 +564,7 @@ static int proximity_do_calibrate(struct gp2a_data  *data,
 	set_fs(KERNEL_DS);
 
 	cal_filp = filp_open(data->pdata->prox_cal_path,
-			O_CREAT | O_TRUNC | O_WRONLY,
+			O_CREAT | O_TRUNC | O_WRONLY | O_SYNC,
 			S_IRUGO | S_IWUSR | S_IWGRP);
 	if (IS_ERR(cal_filp)) {
 		pr_err("%s: Can't open calibration file\n", __func__);
@@ -617,7 +617,7 @@ static int proximity_manual_offset(struct gp2a_data  *data, u8 change_on)
 	set_fs(KERNEL_DS);
 
 	cal_filp = filp_open(data->pdata->prox_cal_path,
-			O_CREAT | O_TRUNC | O_WRONLY,
+			O_CREAT | O_TRUNC | O_WRONLY | O_SYNC,
 			S_IRUGO | S_IWUSR | S_IWGRP);
 	if (IS_ERR(cal_filp)) {
 		pr_err("%s: Can't open calibration file\n", __func__);
@@ -1503,8 +1503,7 @@ static void gp2a_i2c_shutdown(struct i2c_client *client)
 		return;
 	}
 
-	cancel_delayed_work(&gp2a->light_work);
-	flush_scheduled_work();
+	cancel_delayed_work_sync(&gp2a->light_work);
 	if (gp2a->pdata->power_on)
 		gp2a->pdata->power_on(false);
 }

@@ -206,7 +206,7 @@ static int sec_bat_check_cable_callback(void)
 	}
 
 	if (psy)
-	psy->get_property(psy, POWER_SUPPLY_PROP_ONLINE, &value);
+		psy->get_property(psy, POWER_SUPPLY_PROP_ONLINE, &value);
 
 	if (((adc == ADC_OPEN || adc == ADC_CEA936ATYPE1_CHG ||
 			adc == ADC_CEA936ATYPE2_CHG) &&
@@ -243,23 +243,23 @@ static int sec_bat_check_cable_callback(void)
 				old_health != health_value.intval) {
 			old_health = health_value.intval;
 			psy_bat->set_property(psy_bat,
-					POWER_SUPPLY_PROP_HEALTH, &health_value);
+				POWER_SUPPLY_PROP_HEALTH, &health_value);
 			power_supply_changed(psy_bat);
 		} else if (health_value.intval == POWER_SUPPLY_HEALTH_GOOD &&
 				old_health != health_value.intval) {
 			old_health = health_value.intval;
 			psy_bat->set_property(psy_bat,
-					POWER_SUPPLY_PROP_HEALTH, &health_value);
+				POWER_SUPPLY_PROP_HEALTH, &health_value);
 			power_supply_changed(psy_bat);
 		} else if (health_value.intval ==
-					POWER_SUPPLY_HEALTH_UNDERVOLTAGE &&
+				POWER_SUPPLY_HEALTH_UNDERVOLTAGE &&
 				value.intval == 0x08 &&
 				current_cable_type !=
 					POWER_SUPPLY_TYPE_BATTERY &&
 				old_health != health_value.intval) {
 			old_health = health_value.intval;
 			psy_bat->set_property(psy_bat,
-					POWER_SUPPLY_PROP_HEALTH, &health_value);
+				POWER_SUPPLY_PROP_HEALTH, &health_value);
 			power_supply_changed(psy_bat);
 		}
 	}
@@ -692,7 +692,7 @@ static void superior_power_gpio_init(void)
 	gpio_request_array(battery_gpios, ARRAY_SIZE(battery_gpios));
 
 	sec_battery_pdata.bat_irq =
-		gpio_to_irq(battery_gpios[TA_NCONNECTED].gpio);
+		OMAP_MAX77693_IRQ_BASE + MAX77693_CHG_IRQ_CHGIN_I;
 
 	sec_battery_pdata.fg_irq =
 		gpio_to_irq(battery_gpios[FUEL_ALERT].gpio);

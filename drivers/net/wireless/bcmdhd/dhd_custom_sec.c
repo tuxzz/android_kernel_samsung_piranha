@@ -70,7 +70,11 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"ES", "ES", 1},
 	{"FI", "FI", 1},
 	{"FR", "FR", 1},
+#ifdef BCM4335_CHIP
+	{"GB", "GB", 6},
+#else
 	{"GB", "GB", 1},
+#endif
 	{"GR", "GR", 1},
 	{"HR", "HR", 1},
 	{"HU", "HU", 1},
@@ -84,7 +88,9 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"LT", "LT", 1},
 	{"LU", "LU", 1},
 	{"LV", "LV", 1},
+#ifndef BCM4330_CHIP
 	{"MA", "MA", 1},
+#endif
 	{"MT", "MT", 1},
 	{"MX", "MX", 1},
 	{"NL", "NL", 1},
@@ -96,8 +102,9 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"SE", "SE", 1},
 	{"SI", "SI", 1},
 	{"SK", "SK", 1},
+#ifndef BCM4330_CHIP
 	{"TR", "TR", 7},
-	{"UA", "UA", 2},
+#endif
 	{"TW", "TW", 2},
 	{"IR", "XZ", 11},	/* Universal if Country code is IRAN, (ISLAMIC REPUBLIC OF) */
 	{"SD", "XZ", 11},	/* Universal if Country code is SUDAN */

@@ -2,13 +2,13 @@
  * Linux cfg80211 driver
  *
  * Copyright (C) 1999-2012, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -146,6 +146,10 @@ u32 wl_dbg_level = WL_DBG_ERR;
 #define COEX_DHCP
 
 #define WLAN_EID_SSID	0
+
+#define WLAN_EID_SSID	0
+#define CH_MIN_5G_CHANNEL 34
+#define CH_MIN_2G_CHANNEL 1
 
 /* This is to override regulatory domains defined in cfg80211 module (reg.c)
  * By default world regulatory domain defined in reg.c puts the flags NL80211_RRF_PASSIVE_SCAN
@@ -3601,6 +3605,9 @@ wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
 				/* we ignore this key index in this case */
 				WL_DBG(("invalid key index (%d)\n", key_idx));
 			}
+#if defined(CUSTOMER_HW4) && defined(USE_DYNAMIC_F2_BLKSIZE)
+			dhdsdio_func_blocksize(dhd, 2, DYNAMIC_F2_BLKSIZE_FOR_NONLEGACY);
+#endif /* CUSTOMER_HW4 && USE_DYNAMIC_F2_BLKSIZE */
 		} else {
 			WL_ERR(("WLC_SET_KEY error (%d)\n", err));
 		}
@@ -5811,6 +5818,23 @@ exit:
 	return err;
 }
 
+/* Function to update sta power save mode for Kernel wifi stack */
+int wl_cfg80211_update_power_mode(struct net_device *dev)
+{
+	int pm = -1;
+	int err;
+
+	err = wldev_ioctl(dev, WLC_GET_PM, &pm, sizeof(pm), false);
+	if (err || (pm == -1)) {
+		WL_ERR(("error (%d)\n", err));
+	} else {
+		pm = (pm == PM_OFF) ? false : true;
+		WL_DBG(("%s: %d\n", __func__, pm));
+		if (dev->ieee80211_ptr)
+			dev->ieee80211_ptr->ps = pm;
+	}
+	return err;
+}
 static s32
 wl_cfg80211_change_beacon(
 	struct wiphy *wiphy,
@@ -7455,6 +7479,53 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 		}
 	}
 
+#if 0 || (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
+static s32
+wl_cfg80211_del_station(
+	struct wiphy *wiphy,
+	struct net_device *ndev,
+	u8* mac_addr)
+{
+	struct net_device *dev;
+	struct wl_priv *wl = wiphy_priv(wiphy);
+	scb_val_t scb_val;
+	s8 eabuf[ETHER_ADDR_STR_LEN];
+
+	WL_DBG(("Entry\n"));
+	if (mac_addr == NULL) {
+		WL_DBG(("mac_addr is NULL ignore it\n"));
+		return 0;
+	}
+
+	if (ndev == wl->p2p_net) {
+		dev = wl_to_prmry_ndev(wl);
+	} else {
+		dev = ndev;
+	}
+
+	if (p2p_is_on(wl)) {
+		/* Suspend P2P discovery search-listen to prevent it from changing the
+		 * channel.
+		 */
+		if ((wl_cfgp2p_discover_enable_search(wl, false)) < 0) {
+			WL_ERR(("Can not disable discovery mode\n"));
+			return -EFAULT;
+		}
+	}
+
+	memcpy(scb_val.ea.octet, mac_addr, ETHER_ADDR_LEN);
+	scb_val.val = DOT11_RC_DEAUTH_LEAVING;
+	if (wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scb_val,
+		sizeof(scb_val_t), true))
+		WL_ERR(("WLC_SCB_DEAUTHENTICATE_FOR_REASON failed\n"));
+	WL_DBG(("Disconnect STA : %s scb_val.val %d\n",
+		bcm_ether_ntoa((const struct ether_addr *)mac_addr, eabuf),
+		scb_val.val));
+	wl_delay(400);
+	return 0;
+}
+#endif 
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
 	cfg80211_rx_mgmt(ndev, freq, 0, mgmt_frame, mgmt_frame_len, GFP_ATOMIC);
 #else
@@ -8976,6 +9047,7 @@ wl_enq_event(struct wl_priv *wl, struct net_device *ndev, u32 event, const wl_ev
 	uint32 data_len;
 	unsigned long flags;
 	gfp_t aflags;
+	u8 *ie_offset = NULL;
 
 	data_len = 0;
 	if (data)
@@ -9904,6 +9976,30 @@ wl_cfg80211_find_interworking_ie(u8 *parse, u32 len)
 	return NULL;
 }
 
+
+#ifdef PNO_SUPPORT
+static s32
+wl_notify_pfn_status(struct wl_priv *wl, struct net_device *ndev,
+	const wl_event_msg_t *e, void *data)
+{
+	WL_ERR((">>> PNO Event\n"));
+
+#ifndef WL_SCHED_SCAN
+#ifndef CUSTOMER_HW4
+	mutex_lock(&wl->usr_sync);
+	/* TODO: Use cfg80211_sched_scan_results(wiphy); */
+	cfg80211_disconnected(ndev, 0, NULL, 0, GFP_KERNEL);
+	mutex_unlock(&wl->usr_sync);
+#endif /* !CUSTOMER_HW4 */
+#else
+	/* If cfg80211 scheduled scan is supported, report the pno results via sched
+	 * scan results
+	 */
+	wl_notify_sched_scan_results(wl, ndev, e, data);
+#endif /* WL_SCHED_SCAN */
+	return 0;
+}
+#endif /* PNO_SUPPORT */
 
 static s32
 wl_cfg80211_add_iw_ie(struct wl_priv *wl, struct net_device *ndev, s32 bssidx, s32 pktflag,

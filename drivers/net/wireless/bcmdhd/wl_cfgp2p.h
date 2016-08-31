@@ -46,7 +46,7 @@ typedef enum {
 /* vendor ies max buffer length for probe response or beacon */
 #define VNDR_IES_MAX_BUF_LEN	1400
 /* normal vendor ies buffer length */
-#define VNDR_IES_BUF_LEN		512
+#define VNDR_IES_BUF_LEN 		512
 
 /* Structure to hold all saved P2P and WPS IEs for a BSSCFG */
 struct p2p_saved_ie {
@@ -134,6 +134,13 @@ enum wl_cfgp2p_status {
 
 /* dword align allocation */
 #define WLC_IOCTL_MAXLEN 8192
+
+#ifdef CUSTOMER_HW4
+#define CFGP2P_ERROR_TEXT		"CFGP2P-INFO2) "
+#else
+#define CFGP2P_ERROR_TEXT		"CFGP2P-ERROR) "
+#endif
+
 
 #define CFGP2P_ERR(args)									\
 	do {										\

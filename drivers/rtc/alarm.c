@@ -220,7 +220,7 @@ void alarm_set_alarmboot(char *alarm_data)
 	else
 		data = 0x00;
 
-	ret = twl_i2c_write_u8(TWL_MODULE_RTC, data, 0x17);
+	ret = twl_i2c_write_u8(TWL4030_MODULE_SECURED_REG, data, 0x00);
 	if (ret < 0)
 		pr_err("twl_rtc: Could not write TWL"
 		       "register 0x17 - error %d\n", ret);

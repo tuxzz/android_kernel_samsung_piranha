@@ -618,7 +618,7 @@ static int mpu6050_input_suspend_gyro(struct mpu6050_input_data *data)
 static int mpu6050_input_resume_gyro(struct mpu6050_input_data *data)
 {
 	int result;
-	unsigned regs[2] = { 0, };
+	unsigned char regs[2] = { 0, };
 
 	CHECK_RESULT(mpu6050_i2c_read_reg
 		(data->client, MPUREG_PWR_MGMT_1, 2, data->gyro_pwr_mgnt));
@@ -632,7 +632,8 @@ static int mpu6050_input_resume_gyro(struct mpu6050_input_data *data)
 	CHECK_RESULT(mpu6050_i2c_write_single_reg
 		(data->client, MPUREG_PWR_MGMT_2, data->gyro_pwr_mgnt[1]));
 
-	regs[0] = 3 << 3;	/* 2000dps */
+	regs[0] =
+		MPUREG_GYRO_CONFIG_VALUE(0, 0, 0, MPU_FS_500DPS);
 	CHECK_RESULT(mpu6050_i2c_write_single_reg
 		(data->client, MPUREG_GYRO_CONFIG, regs[0]));
 
