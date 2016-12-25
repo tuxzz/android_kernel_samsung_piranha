@@ -1,0 +1,14 @@
+--- lib/klist.c	2012-05-08 00:02:36.000000000 +0800
++++ lib/klist.c	2013-10-22 15:58:59.000000000 +0800
+@@ -193,10 +193,10 @@
+ 		if (waiter->node != n)
+ 			continue;
+ 
++		list_del(&waiter->list);
+ 		waiter->woken = 1;
+ 		mb();
+ 		wake_up_process(waiter->process);
+-		list_del(&waiter->list);
+ 	}
+ 	spin_unlock(&klist_remove_lock);
+ 	knode_set_klist(n, NULL);

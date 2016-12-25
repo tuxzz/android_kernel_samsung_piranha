@@ -1,0 +1,13 @@
+--- arch/arm/kernel/traps.c	2012-05-08 00:02:36.000000000 +0800
++++ arch/arm/kernel/traps.c	2013-10-22 15:58:59.000000000 +0800
+@@ -451,7 +451,9 @@
+ 		if (end > vma->vm_end)
+ 			end = vma->vm_end;
+ 
+-		flush_cache_user_range(vma, start, end);
++		up_read(&mm->mmap_sem);
++		flush_cache_user_range(start, end);
++		return;
+ 	}
+ 	up_read(&mm->mmap_sem);
+ }

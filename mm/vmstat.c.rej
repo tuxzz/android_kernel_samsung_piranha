@@ -1,0 +1,11 @@
+--- mm/vmstat.c	2012-05-08 00:02:36.000000000 +0800
++++ mm/vmstat.c	2013-10-22 15:58:59.000000000 +0800
+@@ -78,7 +78,7 @@
+  *
+  * vm_stat contains the global counters
+  */
+-atomic_long_t vm_stat[NR_VM_ZONE_STAT_ITEMS];
++atomic_long_t vm_stat[NR_VM_ZONE_STAT_ITEMS] __cacheline_aligned_in_smp;
+ EXPORT_SYMBOL(vm_stat);
+ 
+ #ifdef CONFIG_SMP
